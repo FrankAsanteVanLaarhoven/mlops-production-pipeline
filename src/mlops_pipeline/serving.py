@@ -38,7 +38,10 @@ except ImportError:
 
 @serve.deployment
 class ModelService:
+    """Serves the registry's latest model behind request/response contracts."""
+
     def __init__(self, registry_root: str, max_abs_feature_value: float):
+        """Load the model selected by the registry's latest pointer."""
         self.model, self.card = load_latest(registry_root)
         self.n_features = int(self.card["architecture"]["n_features"])
         self.max_abs_feature_value = max_abs_feature_value
@@ -49,6 +52,7 @@ class ModelService:
         )
 
     async def __call__(self, request: Request) -> JSONResponse:
+        """Route health and prediction requests."""
         path = request.url.path
         if request.method == "GET" and path in ("/", "/health"):
             return JSONResponse(
@@ -139,6 +143,7 @@ def _run_smoke_test(base_url: str) -> int:
 
 
 def main() -> None:
+    """CLI entry point for `mlops-serve`."""
     parser = argparse.ArgumentParser(description="Serve the latest registered model")
     parser.add_argument("--config", default="configs/pipeline.yaml")
     parser.add_argument(

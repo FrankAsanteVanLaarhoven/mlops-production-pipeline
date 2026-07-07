@@ -75,6 +75,7 @@ def evaluate_model(
 
 
 def enforce_data_gate(drift_share: float, gates: GatesConfig) -> None:
+    """Raise GateFailure when the drifted-feature share breaches the limit."""
     if drift_share >= gates.max_drifted_share:
         raise GateFailure(
             f"data gate breached: drifted feature share {drift_share:.2%} "
@@ -83,6 +84,7 @@ def enforce_data_gate(drift_share: float, gates: GatesConfig) -> None:
 
 
 def enforce_model_gates(metrics: dict, gates: GatesConfig) -> None:
+    """Raise GateFailure listing every breached model gate at once."""
     breaches = []
     if metrics["accuracy"] < gates.min_accuracy:
         breaches.append(

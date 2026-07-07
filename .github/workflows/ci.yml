@@ -15,7 +15,25 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - run: uv sync --group dev
-      - run: uv run ruff check src tests
+      - run: uv run ruff check src tools tests
+
+  code-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --group dev
+      - name: Function-level code review
+        run: uv run python tools/code_review.py
+      - name: Upload review report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-review-report
+          path: artifacts/review/report.json
 
   test:
     runs-on: ubuntu-latest
@@ -26,5 +44,5 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - run: uv sync --group dev
-      - name: Unit tests
-        run: uv run pytest -m "not integration" -q
+      - name: Unit tests with coverage gate
+        run: uv run pytest -m "not integration" -q --cov --cov-fail-under=95

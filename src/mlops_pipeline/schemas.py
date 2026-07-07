@@ -10,10 +10,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class PredictionRequest(BaseModel):
+    """Inference request: one feature vector."""
+
     features: list[float] = Field(..., description="Feature vector for one sample")
 
 
 class PredictionResponse(BaseModel):
+    """Inference response contract; probability is hard-bounded to [0, 1]."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     predicted_class: int = Field(..., ge=0, le=1)

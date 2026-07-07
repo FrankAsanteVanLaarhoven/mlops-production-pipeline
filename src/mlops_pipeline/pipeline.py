@@ -14,7 +14,8 @@ from .steps import data_gate_step, evaluate_step, ingest_step, register_step, tr
 
 
 @pipeline
-def training_pipeline(config: dict):
+def training_pipeline(config: dict) -> None:
+    """Gated lifecycle: no model is registered unless every quality gate passes."""
     dataset = ingest_step(config)
     drift_share = data_gate_step(config, dataset)
     trained = train_step(config, dataset, drift_share)
@@ -23,6 +24,7 @@ def training_pipeline(config: dict):
 
 
 def main() -> None:
+    """CLI entry point for `mlops-train`."""
     parser = argparse.ArgumentParser(description="Run the MLOps training pipeline")
     parser.add_argument(
         "--config",

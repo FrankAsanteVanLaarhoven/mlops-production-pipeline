@@ -58,3 +58,58 @@ def test_load_latest_missing_pointer(tmp_path):
 
     with pytest.raises(FileNotFoundError, match="latest pointer"):
         load_latest(tmp_path / "empty")
+
+
+def test_dvc_track_skips_when_dvc_missing(trained, bundle, tmp_path, monkeypatch, capsys):
+    import mlops_pipeline.registry as registry_module
+
+    monkeypatch.setattr(registry_module.shutil, "which", lambda _: None)
+    model, params = trained
+    architecture = {
+        "n_features": bundle.n_features,
+        "hidden_dim": params["hidden_dim"],
+        "weight_bit_width": params["weight_bit_width"],
+    }
+    register_model(
+        model=model,
+        architecture=architecture,
+        params=params,
+        metrics={"accuracy": 0.9},
+        drift_share=0.0,
+        data_fingerprint=bundle.fingerprint(),
+        root=tmp_path / "registry",
+        dvc_track=True,
+    )
+    assert "skipping artifact versioning" in capsys.readouterr().out
+
+
+def test_dvc_track_raises_on_dvc_failure(trained, bundle, tmp_path, monkeypatch):
+    import subprocess
+
+    import pytest
+
+    import mlops_pipeline.registry as registry_module
+
+    monkeypatch.setattr(registry_module.shutil, "which", lambda _: "/usr/bin/dvc")
+    monkeypatch.setattr(
+        registry_module.subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(a, returncode=1, stdout="", stderr="boom"),
+    )
+    model, params = trained
+    architecture = {
+        "n_features": bundle.n_features,
+        "hidden_dim": params["hidden_dim"],
+        "weight_bit_width": params["weight_bit_width"],
+    }
+    with pytest.raises(RuntimeError, match="dvc add failed"):
+        register_model(
+            model=model,
+            architecture=architecture,
+            params=params,
+            metrics={"accuracy": 0.9},
+            drift_share=0.0,
+            data_fingerprint=bundle.fingerprint(),
+            root=tmp_path / "registry",
+            dvc_track=True,
+        )

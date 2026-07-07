@@ -109,6 +109,34 @@ any mismatch:
 make smoke
 ```
 
+## Case study: real data through the same gates
+
+[`notebooks/adult_income_case_study.ipynb`](notebooks/adult_income_case_study.ipynb)
+runs the **Adult Census Income** dataset (UCI, mirrored on the Hugging Face Hub as
+[`scikit-learn/adult-census-income`](https://huggingface.co/datasets/scikit-learn/adult-census-income),
+pinned to revision `fbeef6e…` with a recorded SHA-256) through the full lifecycle,
+calling the same package functions the pipeline runs:
+
+- leakage-controlled preprocessing (60/20/20 split before any statistic is fitted;
+  encoders and scalers fitted on the development portion only)
+- the drift gate exercised against **three engineered shifts** — a demographic
+  partition that breaches it, plus an age shift and an upstream scaler fault that
+  expose where the share-of-drifted-features aggregation is blind
+- seeded Optuna search with trial history and fANOVA importances, selection strictly
+  on the validation split
+- a 2–8-bit quantisation study (three seeds per point) locating the accuracy cliff
+- one-shot test evaluation: accuracy vs the majority baseline, ROC-AUC, calibration,
+  confusion matrix, and subgroup error accounting by sex and race
+- robustness sweeps an order of magnitude beyond the gate's operating point,
+  registration with full lineage, and the serving contract exercised with an
+  OOD threshold calibrated from the development data
+
+The notebook is committed with outputs and regenerates deterministically:
+
+```bash
+make notebook
+```
+
 ## Configuration
 
 A run is fully described by one YAML file (defaults shown trimmed):
@@ -201,16 +229,44 @@ Every response includes the model version that produced it:
 | Out-of-distribution feature values | 400 |
 | Response violating the output contract | 500 |
 
+## Code quality: automated function-level review
+
+Beyond lint, [`tools/code_review.py`](tools/code_review.py) statically audits **every
+function in `src/` and `tools/`** on every commit, push, and CI run:
+
+| Rule | Enforces |
+|---|---|
+| R1 | public modules, classes, functions carry a docstring |
+| R2 | every parameter and return is type-annotated |
+| R3 | cyclomatic complexity ≤ 10 |
+| R4 | function length ≤ 60 lines |
+| R5 | no bare `except:` |
+| R6 | no mutable default arguments |
+| R7 | no work-in-progress markers in source |
+| R8 | nesting depth ≤ 4 |
+
+Each function is SHA-256-fingerprinted and diffed against the previous run, so every
+build reports exactly which functions were added, changed, or removed — and any
+violation fails the build. The JSON report is uploaded as a CI artifact. The reviewer
+audits itself with the same rules.
+
+```bash
+make review      # run the reviewer locally
+make hooks       # git hooks: review + lint on commit, unit tests on push
+```
+
 ## Testing
 
 ```bash
-make test        # unit suite: config, data, model, training, validation, registry, schemas
+make test        # unit suite + ≥95% coverage gate on the core modules
 make test-all    # + end-to-end ZenML pipeline run (marked `integration`)
 make lint        # ruff
 ```
 
 The unit suite trains real (tiny) quantized models — no mocked ML — and still finishes
-in well under a minute on CPU. CI runs lint and the unit suite on every push and PR.
+in well under a minute on CPU. Coverage is gated on the framework-free core; the
+ZenML/Ray adapters are exercised by the integration test and the serving smoke test.
+CI runs lint, the function-level review, and the unit suite on every push and PR.
 
 ## Docker
 
@@ -235,19 +291,33 @@ make docker-serve   # mounts ./artifacts/registry read-only, serves on :8000
 │   ├── steps.py                 # thin ZenML step adapters
 │   ├── pipeline.py              # pipeline definition + `mlops-train` CLI
 │   └── serving.py               # Ray Serve deployment + `mlops-serve` CLI
+├── notebooks/                   # Adult Census Income case study (executed)
+├── tools/code_review.py         # deterministic function-level reviewer
 ├── tests/                       # unit suite + integration pipeline test
-├── .github/workflows/ci.yml     # lint + tests on push/PR
+├── .github/workflows/ci.yml     # lint + code review + tests on push/PR
+├── .pre-commit-config.yaml      # review + lint on commit, tests on push
+├── CONTRIBUTING.md              # how to contribute; the quality bar
 ├── Dockerfile                   # serving image
-└── Makefile                     # install · lint · test · train · serve · smoke
+└── Makefile                     # install · review · test · train · serve · notebook
 ```
 
 ## Roadmap
 
+- [ ] Per-column drift severity gates (the case study shows share-based aggregation
+      is blind to concentrated shifts, e.g. an upstream scaler fault)
+- [ ] Class-weighted training + subgroup gates for imbalanced targets
 - [ ] DVC remote + scheduled retraining workflow
 - [ ] Post-deployment drift monitoring against the training reference (Evidently)
 - [ ] Canary rollout between registry versions behind Ray Serve
 - [ ] ONNX export path for the quantized model (edge deployment)
 - [ ] Prometheus metrics endpoint on the serving layer
+
+## Contributing
+
+Contributions are welcome — new case studies on Hugging Face datasets, gate
+implementations, and roadmap items are good starting points. [CONTRIBUTING.md](CONTRIBUTING.md)
+describes the setup and the quality bar (lint, function-level review, coverage-gated
+tests — the same bar CI enforces on every PR).
 
 ## License
 

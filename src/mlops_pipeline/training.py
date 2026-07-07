@@ -26,14 +26,15 @@ def _fit(model: nn.Module, X: torch.Tensor, y: torch.Tensor, lr: float, epochs: 
 
 
 def accuracy(model: nn.Module, X: torch.Tensor, y: torch.Tensor) -> float:
+    """Binary classification accuracy at the 0.5 threshold."""
     model.eval()
     with torch.no_grad():
         preds = (model(X) > 0.5).float()
     return float((preds == y).float().mean().item())
 
 
-def run_hpo(bundle: DatasetBundle, cfg: TrainingConfig, seed: int) -> dict:
-    """Search lr, bit width, and hidden size; return the best trial's params."""
+def run_hpo_study(bundle: DatasetBundle, cfg: TrainingConfig, seed: int) -> optuna.Study:
+    """Run the hyperparameter search and return the full study for analysis."""
     X_train = torch.tensor(bundle.X_train)
     y_train = torch.tensor(bundle.y_train)
     X_test = torch.tensor(bundle.X_test)
@@ -56,7 +57,12 @@ def run_hpo(bundle: DatasetBundle, cfg: TrainingConfig, seed: int) -> dict:
         direction="maximize", sampler=optuna.samplers.TPESampler(seed=seed)
     )
     study.optimize(objective, n_trials=cfg.n_trials)
-    return dict(study.best_trial.params)
+    return study
+
+
+def run_hpo(bundle: DatasetBundle, cfg: TrainingConfig, seed: int) -> dict:
+    """Search lr, bit width, and hidden size; return the best trial's params."""
+    return dict(run_hpo_study(bundle, cfg, seed).best_trial.params)
 
 
 def train_final(

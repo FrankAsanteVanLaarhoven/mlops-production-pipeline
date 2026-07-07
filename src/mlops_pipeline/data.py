@@ -13,6 +13,8 @@ from .config import DataConfig
 
 @dataclass
 class DatasetBundle:
+    """Train/test split with feature names and a content fingerprint."""
+
     X_train: np.ndarray
     y_train: np.ndarray
     X_test: np.ndarray
@@ -21,6 +23,7 @@ class DatasetBundle:
 
     @property
     def n_features(self) -> int:
+        """Width of the feature matrix."""
         return self.X_train.shape[1]
 
     def fingerprint(self) -> str:
@@ -42,6 +45,7 @@ class DatasetBundle:
 
     @classmethod
     def from_dict(cls, d: dict) -> DatasetBundle:
+        """Rebuild a bundle from its `to_dict` form."""
         return cls(
             X_train=d["X_train"],
             y_train=d["y_train"],
@@ -78,6 +82,7 @@ def _split(
 
 
 def load_dataset(cfg: DataConfig, seed: int) -> DatasetBundle:
+    """Load the configured source (synthetic or CSV) and split it reproducibly."""
     if cfg.source == "synthetic":
         X, y = make_synthetic(cfg.n_samples, cfg.n_features, seed)
         feature_names = [f"feature_{i}" for i in range(cfg.n_features)]

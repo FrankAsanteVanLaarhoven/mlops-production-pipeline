@@ -33,8 +33,16 @@ Repository = "https://github.com/FrankAsanteVanLaarhoven/mlops-production-pipeli
 
 [dependency-groups]
 dev = [
+    "pre-commit>=4.0",
     "pytest>=9.1.1",
+    "pytest-cov>=6.0",
     "ruff>=0.8.0",
+]
+notebooks = [
+    "ipykernel>=6.29",
+    "matplotlib>=3.9",
+    "nbconvert>=7.16",
+    "scikit-learn>=1.5",
 ]
 
 [build-system]
@@ -54,6 +62,17 @@ torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
+# Coverage is gated on the framework-free core. The excluded adapters have their
+# own executable checks: steps/pipeline run in the integration test, serving in
+# the deployed smoke test (`mlops-serve --smoke-test`).
+[tool.coverage.run]
+source = ["src/mlops_pipeline"]
+omit = [
+    "src/mlops_pipeline/steps.py",
+    "src/mlops_pipeline/pipeline.py",
+    "src/mlops_pipeline/serving.py",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

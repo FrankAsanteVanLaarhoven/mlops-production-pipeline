@@ -31,6 +31,7 @@ STAGING_CHECKPOINT = Path("artifacts/staging/model.pt")
 
 @step
 def ingest_step(config: dict) -> dict:
+    """Load the configured data source and log its shape and fingerprint."""
     cfg = PipelineConfig.model_validate(config)
     bundle = load_dataset(cfg.data, cfg.seed)
     print(
@@ -43,6 +44,7 @@ def ingest_step(config: dict) -> dict:
 
 @step
 def data_gate_step(config: dict, dataset: dict) -> float:
+    """Fail the run if the drifted-feature share breaches the data gate."""
     cfg = PipelineConfig.model_validate(config)
     bundle = DatasetBundle.from_dict(dataset)
     share = data_drift_share(bundle, report_path=DRIFT_REPORT_PATH)
@@ -53,6 +55,7 @@ def data_gate_step(config: dict, dataset: dict) -> float:
 
 @step
 def train_step(config: dict, dataset: dict, drift_share: float) -> dict:
+    """Optuna search + final training; stages the checkpoint for evaluation."""
     cfg = PipelineConfig.model_validate(config)
     bundle = DatasetBundle.from_dict(dataset)
 
@@ -78,6 +81,7 @@ def train_step(config: dict, dataset: dict, drift_share: float) -> dict:
 
 @step
 def evaluate_step(config: dict, dataset: dict, training_output: dict) -> dict:
+    """Fail the run if accuracy, robustness, or output-bound gates breach."""
     cfg = PipelineConfig.model_validate(config)
     bundle = DatasetBundle.from_dict(dataset)
     model, _ = load_checkpoint(training_output["checkpoint_path"])
@@ -97,6 +101,7 @@ def evaluate_step(config: dict, dataset: dict, training_output: dict) -> dict:
 def register_step(
     config: dict, dataset: dict, training_output: dict, metrics: dict, drift_share: float
 ) -> str:
+    """Publish the gated model to the versioned registry with full lineage."""
     cfg = PipelineConfig.model_validate(config)
     bundle = DatasetBundle.from_dict(dataset)
     model, architecture = load_checkpoint(training_output["checkpoint_path"])

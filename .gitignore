@@ -19,3 +19,4 @@ artifacts/*
 
 # Local data
 data/
+.coverage

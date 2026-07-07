@@ -14,6 +14,8 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class DataConfig(BaseModel):
+    """Data source selection, sizing, and split."""
+
     source: Literal["synthetic", "csv"] = "synthetic"
     csv_path: Path | None = None
     target_column: str = "target"
@@ -29,6 +31,8 @@ class DataConfig(BaseModel):
 
 
 class FloatRange(BaseModel):
+    """Continuous hyperparameter search range."""
+
     low: float
     high: float
     log: bool = False
@@ -41,6 +45,8 @@ class FloatRange(BaseModel):
 
 
 class IntRange(BaseModel):
+    """Integer hyperparameter search range."""
+
     low: int
     high: int
 
@@ -52,6 +58,8 @@ class IntRange(BaseModel):
 
 
 class TrainingConfig(BaseModel):
+    """Optuna budget and hyperparameter search space."""
+
     n_trials: int = Field(20, gt=0, description="Optuna trials for hyperparameter search")
     hpo_epochs: int = Field(50, gt=0, description="epochs per Optuna trial")
     epochs: int = Field(100, gt=0, description="epochs for the final model")
@@ -70,11 +78,15 @@ class GatesConfig(BaseModel):
 
 
 class RegistryConfig(BaseModel):
+    """Where gated models are published and whether DVC tracks them."""
+
     root: Path = Path("artifacts/registry")
     dvc_track: bool = True
 
 
 class ServingConfig(BaseModel):
+    """Bind address and input guard for the prediction API."""
+
     host: str = "0.0.0.0"
     port: int = Field(8000, gt=0, lt=65536)
     max_abs_feature_value: float = Field(
@@ -83,6 +95,8 @@ class ServingConfig(BaseModel):
 
 
 class PipelineConfig(BaseModel):
+    """Root config: one instance fully describes a pipeline run."""
+
     seed: int = 42
     data: DataConfig = DataConfig()
     training: TrainingConfig = TrainingConfig()
@@ -92,6 +106,7 @@ class PipelineConfig(BaseModel):
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> PipelineConfig:
+        """Load and validate a config from a YAML file."""
         with open(path) as f:
             raw = yaml.safe_load(f) or {}
         return cls.model_validate(raw)

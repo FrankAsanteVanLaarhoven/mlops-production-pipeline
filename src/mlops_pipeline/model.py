@@ -24,10 +24,12 @@ def build_model(n_features: int, hidden_dim: int, weight_bit_width: int) -> nn.S
 
 
 def save_checkpoint(model: nn.Module, architecture: dict, path: str | Path) -> None:
+    """Persist weights together with the architecture needed to rebuild them."""
     torch.save({"state_dict": model.state_dict(), "architecture": architecture}, path)
 
 
 def load_checkpoint(path: str | Path) -> tuple[nn.Sequential, dict]:
+    """Rebuild the exact network from a checkpoint; returns (model, architecture)."""
     checkpoint = torch.load(path, weights_only=False)
     architecture = checkpoint["architecture"]
     model = build_model(
