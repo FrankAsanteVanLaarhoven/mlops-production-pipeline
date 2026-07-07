@@ -1,0 +1,7 @@
+.venv/
+.zenml-config/
+.dvc/cache/
+__pycache__/
+*.html
+*.pt
+.pytest_cache/

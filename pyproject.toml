@@ -1,0 +1,20 @@
+[project]
+name = "mlops-env"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "brevitas>=0.12.1",
+    "evidently>=0.7.21",
+    "guardrails-ai>=0.10.2",
+    "labelbox>=7.8.0",
+    "lakefs>=0.16.0",
+    "lakefs-spec>=0.14.0",
+    "optuna>=4.9.0",
+    "pytest>=9.1.1",
+    "ray[serve]>=2.52.1",
+    "torch>=2.12.1",
+    "vllm-metal>=0.1.0",
+    "zenml>=0.82.0",
+]
