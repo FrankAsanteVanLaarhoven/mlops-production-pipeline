@@ -192,7 +192,7 @@ artifacts to S3/GCS/Azure.
 Every response includes the model version that produced it:
 
 ```json
-{ "predicted_class": 1, "probability": 0.87, "model_version": "v20260707-142530-e78373a" }
+{ "predicted_class": 1, "probability": 0.99, "model_version": "v20260707-023609-e78373a" }
 ```
 
 | Failure | Status |
