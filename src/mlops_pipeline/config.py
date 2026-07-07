@@ -75,6 +75,7 @@ class GatesConfig(BaseModel):
     min_accuracy: float = Field(0.85, ge=0.0, le=1.0)
     min_noise_consistency: float = Field(0.90, ge=0.0, le=1.0)
     noise_std: float = Field(0.05, gt=0.0)
+    per_column_drift: dict[str, float] = Field(default_factory=dict)
 
 
 class RegistryConfig(BaseModel):

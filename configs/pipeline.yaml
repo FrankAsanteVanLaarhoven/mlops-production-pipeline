@@ -24,6 +24,8 @@ gates:
   min_accuracy: 0.85
   min_noise_consistency: 0.90
   noise_std: 0.05
+  per_column_drift:
+    feature_0: 0.05        # fail immediately if feature_0 p-value < 0.05
 
 registry:
   root: artifacts/registry

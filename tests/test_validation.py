@@ -3,6 +3,7 @@ import pytest
 from mlops_pipeline.config import GatesConfig
 from mlops_pipeline.validation import (
     GateFailure,
+    data_drift_metrics,
     data_drift_share,
     enforce_data_gate,
     enforce_model_gates,
@@ -48,3 +49,32 @@ def test_model_gates_pass_good_metrics():
     enforce_model_gates(
         {"accuracy": 0.95, "noise_consistency": 0.97, "outputs_bounded": True}, gates
     )
+
+
+def test_data_drift_metrics_structure(bundle):
+    share, p_values = data_drift_metrics(bundle)
+    assert 0.0 <= share <= 1.0
+    assert isinstance(p_values, dict)
+    assert len(p_values) > 0
+    for col, val in p_values.items():
+        assert isinstance(col, str)
+        assert isinstance(val, float)
+        assert 0.0 <= val <= 1.0
+
+
+def test_enforce_data_gate_per_column():
+    # Pass check: p-value above threshold
+    gates = GatesConfig(per_column_drift={"feature_0": 0.05})
+    enforce_data_gate(0.1, gates, {"feature_0": 0.2})
+
+    # Fail check: p-value below threshold
+    with pytest.raises(GateFailure, match="column 'feature_0' drift p-value"):
+        enforce_data_gate(0.1, gates, {"feature_0": 0.01})
+
+    # Fail check: both global share and per-column breach reported
+    gates_both = GatesConfig(max_drifted_share=0.2, per_column_drift={"feature_0": 0.05})
+    with pytest.raises(GateFailure) as excinfo:
+        enforce_data_gate(0.5, gates_both, {"feature_0": 0.01})
+    message = str(excinfo.value)
+    assert "drifted feature share" in message
+    assert "column 'feature_0'" in message

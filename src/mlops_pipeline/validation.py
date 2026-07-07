@@ -21,8 +21,10 @@ class GateFailure(RuntimeError):
     """A quality gate was breached; the pipeline must not ship this model."""
 
 
-def data_drift_share(bundle: DatasetBundle, report_path: str | Path | None = None) -> float:
-    """Run Evidently drift + summary presets; return the share of drifted features."""
+def data_drift_metrics(
+    bundle: DatasetBundle, report_path: str | Path | None = None
+) -> tuple[float, dict[str, float]]:
+    """Run Evidently drift presets; return drift share and column p-values."""
     from evidently import Report
     from evidently.presets import DataDriftPreset, DataSummaryPreset
 
@@ -38,7 +40,22 @@ def data_drift_share(bundle: DatasetBundle, report_path: str | Path | None = Non
     drift_metric = next(
         m for m in metrics if m.get("config", {}).get("type") == DRIFTED_COLUMNS_METRIC
     )
-    return float(drift_metric["value"]["share"])
+    share = float(drift_metric["value"]["share"])
+
+    column_p_values = {}
+    for m in metrics:
+        if m.get("config", {}).get("type") == "evidently:metric_v2:ValueDrift":
+            col = m["config"].get("column")
+            if col is not None:
+                column_p_values[col] = float(m["value"])
+
+    return share, column_p_values
+
+
+def data_drift_share(bundle: DatasetBundle, report_path: str | Path | None = None) -> float:
+    """Run Evidently drift + summary presets; return the share of drifted features."""
+    share, _ = data_drift_metrics(bundle, report_path)
+    return share
 
 
 def evaluate_model(model: nn.Module, bundle: DatasetBundle, noise_std: float, seed: int) -> dict:
@@ -72,13 +89,27 @@ def evaluate_model(model: nn.Module, bundle: DatasetBundle, noise_std: float, se
     }
 
 
-def enforce_data_gate(drift_share: float, gates: GatesConfig) -> None:
-    """Raise GateFailure when the drifted-feature share breaches the limit."""
+def enforce_data_gate(
+    drift_share: float,
+    gates: GatesConfig,
+    column_p_values: dict[str, float] | None = None,
+) -> None:
+    """Raise GateFailure when the drifted-feature share or per-column drift breaches limits."""
+    breaches = []
     if drift_share >= gates.max_drifted_share:
-        raise GateFailure(
-            f"data gate breached: drifted feature share {drift_share:.2%} "
-            f">= limit {gates.max_drifted_share:.2%}"
+        breaches.append(
+            f"drifted feature share {drift_share:.2%} >= limit {gates.max_drifted_share:.2%}"
         )
+    if column_p_values is not None and gates.per_column_drift:
+        for col, threshold in gates.per_column_drift.items():
+            if col in column_p_values:
+                p_val = column_p_values[col]
+                if p_val < threshold:
+                    breaches.append(
+                        f"column '{col}' drift p-value {p_val:.5e} < threshold {threshold}"
+                    )
+    if breaches:
+        raise GateFailure("data gate breached: " + "; ".join(breaches))
 
 
 def enforce_model_gates(metrics: dict, gates: GatesConfig) -> None:

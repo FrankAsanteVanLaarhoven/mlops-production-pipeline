@@ -19,7 +19,7 @@ from .model import load_checkpoint, save_checkpoint
 from .registry import register_model
 from .training import run_hpo, train_final
 from .validation import (
-    data_drift_share,
+    data_drift_metrics,
     enforce_data_gate,
     enforce_model_gates,
     evaluate_model,
@@ -47,9 +47,9 @@ def data_gate_step(config: dict, dataset: dict) -> float:
     """Fail the run if the drifted-feature share breaches the data gate."""
     cfg = PipelineConfig.model_validate(config)
     bundle = DatasetBundle.from_dict(dataset)
-    share = data_drift_share(bundle, report_path=DRIFT_REPORT_PATH)
+    share, p_values = data_drift_metrics(bundle, report_path=DRIFT_REPORT_PATH)
     print(f"[data-gate] drifted feature share: {share:.2%} (report: {DRIFT_REPORT_PATH})")
-    enforce_data_gate(share, cfg.gates)
+    enforce_data_gate(share, cfg.gates, p_values)
     return share
 
 
