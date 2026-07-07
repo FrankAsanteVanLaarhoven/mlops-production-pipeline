@@ -1,0 +1,35 @@
+# Single source of truth for a pipeline run.
+# Every threshold and search range the pipeline uses is declared here.
+
+seed: 42
+
+data:
+  source: synthetic        # synthetic | csv
+  # csv_path: data/train.csv
+  # target_column: target
+  n_samples: 2000
+  n_features: 10
+  test_size: 0.2
+
+training:
+  n_trials: 20             # Optuna trials
+  hpo_epochs: 50           # epochs per trial
+  epochs: 100              # epochs for the final model
+  lr: { low: 1.0e-3, high: 1.0e-1, log: true }
+  weight_bit_width: { low: 4, high: 8 }
+  hidden_dim: { low: 4, high: 32 }
+
+gates:
+  max_drifted_share: 0.3   # fail the run if >= 30% of features drift
+  min_accuracy: 0.85
+  min_noise_consistency: 0.90
+  noise_std: 0.05
+
+registry:
+  root: artifacts/registry
+  dvc_track: true
+
+serving:
+  host: 0.0.0.0
+  port: 8000
+  max_abs_feature_value: 10.0

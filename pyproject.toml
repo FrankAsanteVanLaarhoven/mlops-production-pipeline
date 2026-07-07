@@ -1,20 +1,74 @@
 [project]
-name = "mlops-env"
-version = "0.1.0"
-description = "Add your description here"
+name = "mlops-production-pipeline"
+version = "0.2.0"
+description = "Production-grade MLOps pipeline: quantization-aware training, data/model quality gates, versioned model registry, and guarded serving."
 readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Frank Asante Van Laarhoven", email = "frankleroyvan@gmail.com" }]
 requires-python = ">=3.12"
 dependencies = [
     "brevitas>=0.12.1",
+    "dvc>=3.55.0",
     "evidently>=0.7.21",
     "guardrails-ai>=0.10.2",
-    "labelbox>=7.8.0",
-    "lakefs>=0.16.0",
-    "lakefs-spec>=0.14.0",
+    "numpy>=1.26",
     "optuna>=4.9.0",
-    "pytest>=9.1.1",
+    "pandas>=2.1",
+    # ray[serve] 2.52 still reads FieldDescriptor.label, which protobuf 7 removed.
+    "protobuf<7",
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
     "ray[serve]>=2.52.1",
+    "requests>=2.31",
     "torch>=2.12.1",
-    "vllm-metal>=0.1.0",
     "zenml>=0.82.0",
 ]
+
+[project.scripts]
+mlops-train = "mlops_pipeline.pipeline:main"
+mlops-serve = "mlops_pipeline.serving:main"
+
+[project.urls]
+Repository = "https://github.com/FrankAsanteVanLaarhoven/mlops-production-pipeline"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mlops_pipeline"]
+
+# On Linux (dev boxes, CI, Docker) pull CPU-only torch wheels: this workload is a
+# small quantized MLP and does not need the multi-GB CUDA stack. macOS resolves
+# from PyPI as usual. Override the index if you need GPU builds.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: end-to-end tests that need the full orchestration stack (deselect with '-m \"not integration\"')",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# These modules must set ZENML_CONFIG_PATH before importing zenml.
+"src/mlops_pipeline/steps.py" = ["E402"]
+"src/mlops_pipeline/pipeline.py" = ["E402"]

@@ -1,7 +1,21 @@
+# Environments & tool state
 .venv/
 .zenml-config/
 .dvc/cache/
+.dvc/tmp/
 __pycache__/
-*.html
-*.pt
 .pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+
+# Generated artifacts (DVC pointer files stay tracked)
+artifacts/*
+!artifacts/*.dvc
+!artifacts/.gitignore
+*.pt
+*.html
+*.db
+
+# Local data
+data/
