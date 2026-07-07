@@ -16,8 +16,8 @@ pytestmark = pytest.mark.integration
 def test_training_pipeline_end_to_end(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
+    from mlops_pipeline.adapters.zenml_pipeline import zenml_training_pipeline
     from mlops_pipeline.config import PipelineConfig
-    from mlops_pipeline.pipeline import training_pipeline
 
     cfg = PipelineConfig.model_validate(
         {
@@ -27,7 +27,7 @@ def test_training_pipeline_end_to_end(tmp_path, monkeypatch):
             "registry": {"root": str(tmp_path / "registry"), "dvc_track": False},
         }
     )
-    training_pipeline(config=cfg.as_step_param())
+    zenml_training_pipeline(config=cfg.as_step_param())
 
     pointer = tmp_path / "registry" / "latest.json"
     assert pointer.exists()

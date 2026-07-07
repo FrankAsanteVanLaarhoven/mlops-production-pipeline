@@ -41,9 +41,7 @@ def data_drift_share(bundle: DatasetBundle, report_path: str | Path | None = Non
     return float(drift_metric["value"]["share"])
 
 
-def evaluate_model(
-    model: nn.Module, bundle: DatasetBundle, noise_std: float, seed: int
-) -> dict:
+def evaluate_model(model: nn.Module, bundle: DatasetBundle, noise_std: float, seed: int) -> dict:
     """Accuracy, perturbation consistency, and output-bound safety in one pass."""
     X = torch.tensor(bundle.X_test)
     y = torch.tensor(bundle.y_test)
@@ -87,9 +85,7 @@ def enforce_model_gates(metrics: dict, gates: GatesConfig) -> None:
     """Raise GateFailure listing every breached model gate at once."""
     breaches = []
     if metrics["accuracy"] < gates.min_accuracy:
-        breaches.append(
-            f"accuracy {metrics['accuracy']:.2%} < required {gates.min_accuracy:.2%}"
-        )
+        breaches.append(f"accuracy {metrics['accuracy']:.2%} < required {gates.min_accuracy:.2%}")
     if metrics["noise_consistency"] < gates.min_noise_consistency:
         breaches.append(
             f"noise consistency {metrics['noise_consistency']:.2%} "

@@ -25,9 +25,7 @@ def test_feature_vector_length_check():
 
 def test_feature_vector_ood_check():
     with pytest.raises(ValueError, match="out-of-distribution"):
-        validate_feature_vector(
-            [15.5] + [0.0] * 9, expected_length=10, max_abs_value=10.0
-        )
+        validate_feature_vector([15.5] + [0.0] * 9, expected_length=10, max_abs_value=10.0)
 
 
 def test_feature_vector_valid_passes():

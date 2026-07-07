@@ -35,9 +35,7 @@ def test_csv_source_requires_path():
 
 def test_invalid_range_rejected():
     with pytest.raises(ValidationError):
-        PipelineConfig.model_validate(
-            {"training": {"weight_bit_width": {"low": 8, "high": 4}}}
-        )
+        PipelineConfig.model_validate({"training": {"weight_bit_width": {"low": 8, "high": 4}}})
 
 
 def test_step_param_is_json_safe():

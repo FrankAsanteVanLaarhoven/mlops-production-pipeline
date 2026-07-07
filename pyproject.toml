@@ -4,7 +4,7 @@ version = "0.2.0"
 description = "Production-grade MLOps pipeline: quantization-aware training, data/model quality gates, versioned model registry, and guarded serving."
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [{ name = "Frank Asante Van Laarhoven", email = "frankleroyvan@gmail.com" }]
+authors = [{ name = "Frank Asante Van Laarhoven", email = "F.Van-Laarhoven2@newcastle.ac.uk" }]
 requires-python = ">=3.12"
 dependencies = [
     "brevitas>=0.12.1",
@@ -41,7 +41,7 @@ dev = [
 notebooks = [
     "ipykernel>=6.29",
     "matplotlib>=3.9",
-    "nbconvert>=7.16",
+    "nbconvert[qtpng]>=7.16",
     "scikit-learn>=1.5",
 ]
 
@@ -72,6 +72,8 @@ omit = [
     "src/mlops_pipeline/steps.py",
     "src/mlops_pipeline/pipeline.py",
     "src/mlops_pipeline/serving.py",
+    "src/mlops_pipeline/adapters/*",
+    "src/mlops_pipeline/core/*",
 ]
 
 [tool.pytest.ini_options]

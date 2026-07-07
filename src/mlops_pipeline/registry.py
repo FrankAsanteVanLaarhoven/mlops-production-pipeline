@@ -87,9 +87,7 @@ def _dvc_track(root: Path) -> None:
     if shutil.which("dvc") is None:
         print("[registry] dvc executable not found; skipping artifact versioning")
         return
-    result = subprocess.run(
-        ["dvc", "add", str(root)], capture_output=True, text=True
-    )
+    result = subprocess.run(["dvc", "add", str(root)], capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"dvc add failed: {result.stderr.strip()}")
     print(f"[registry] DVC tracking updated for {root}")
@@ -100,9 +98,7 @@ def load_latest(root: str | Path) -> tuple[nn.Module, dict]:
     root = Path(root)
     pointer = root / LATEST_FILENAME
     if not pointer.exists():
-        raise FileNotFoundError(
-            f"no latest pointer at {pointer}; run the training pipeline first"
-        )
+        raise FileNotFoundError(f"no latest pointer at {pointer}; run the training pipeline first")
     version = json.loads(pointer.read_text())["version"]
     version_dir = root / version
     model, _ = load_checkpoint(version_dir / MODEL_FILENAME)

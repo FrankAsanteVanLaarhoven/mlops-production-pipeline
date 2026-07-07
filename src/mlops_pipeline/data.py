@@ -89,9 +89,7 @@ def load_dataset(cfg: DataConfig, seed: int) -> DatasetBundle:
     else:
         df = pd.read_csv(cfg.csv_path)
         if cfg.target_column not in df.columns:
-            raise ValueError(
-                f"target column '{cfg.target_column}' not found in {cfg.csv_path}"
-            )
+            raise ValueError(f"target column '{cfg.target_column}' not found in {cfg.csv_path}")
         feature_names = [c for c in df.columns if c != cfg.target_column]
         X = df[feature_names].to_numpy(dtype=np.float32)
         y = df[cfg.target_column].to_numpy(dtype=np.float32).reshape(-1, 1)

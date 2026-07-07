@@ -30,9 +30,7 @@ def validate_feature_vector(
 ) -> None:
     """Reject malformed or out-of-distribution inputs before they reach the model."""
     if len(features) != expected_length:
-        raise ValueError(
-            f"expected {expected_length} features, got {len(features)}"
-        )
+        raise ValueError(f"expected {expected_length} features, got {len(features)}")
     for i, value in enumerate(features):
         if abs(value) > max_abs_value:
             raise ValueError(

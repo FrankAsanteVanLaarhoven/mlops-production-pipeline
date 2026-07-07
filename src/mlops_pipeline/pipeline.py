@@ -1,26 +1,28 @@
-"""End-to-end training pipeline: ingest → data gate → HPO/train → model gates → register."""
+"""End-to-end training pipeline entry point."""
 
 import argparse
-import os
-from pathlib import Path
 
-# Must be set before zenml is imported so this repo keeps its own ZenML state.
-os.environ.setdefault("ZENML_CONFIG_PATH", str(Path(".zenml-config").resolve()))
+from .adapters.zenml_pipeline import ZenMLPipelineAdapter
+from .core.pipeline import BasePipeline
 
-from zenml import pipeline
-
-from .config import PipelineConfig
-from .steps import data_gate_step, evaluate_step, ingest_step, register_step, train_step
+# Registry of available orchestrators
+_ORCHESTRATORS: dict[str, type[BasePipeline]] = {
+    "zenml": ZenMLPipelineAdapter,
+}
 
 
-@pipeline
-def training_pipeline(config: dict) -> None:
-    """Gated lifecycle: no model is registered unless every quality gate passes."""
-    dataset = ingest_step(config)
-    drift_share = data_gate_step(config, dataset)
-    trained = train_step(config, dataset, drift_share)
-    metrics = evaluate_step(config, dataset, trained)
-    register_step(config, dataset, trained, metrics, drift_share)
+def register_orchestrator(name: str, orchestrator_cls: type[BasePipeline]) -> None:
+    """Register a custom orchestration engine (e.g. airflow, prefect)."""
+    _ORCHESTRATORS[name] = orchestrator_cls
+
+
+def get_pipeline_orchestrator(name: str = "zenml") -> BasePipeline:
+    """Retrieve an orchestration engine instance by name."""
+    if name not in _ORCHESTRATORS:
+        raise ValueError(
+            f"Orchestrator '{name}' is not registered. Choose from: {list(_ORCHESTRATORS.keys())}"
+        )
+    return _ORCHESTRATORS[name]()
 
 
 def main() -> None:
@@ -31,12 +33,15 @@ def main() -> None:
         default="configs/pipeline.yaml",
         help="path to the pipeline YAML config (default: configs/pipeline.yaml)",
     )
+    parser.add_argument(
+        "--engine",
+        default="zenml",
+        help="orchestrator engine to use (default: zenml)",
+    )
     args = parser.parse_args()
 
-    cfg = PipelineConfig.from_yaml(args.config)
-    print(f"=== training pipeline starting (config: {args.config}, seed: {cfg.seed}) ===")
-    training_pipeline(config=cfg.as_step_param())
-    print(f"=== training pipeline complete; registry: {cfg.registry.root} ===")
+    orchestrator = get_pipeline_orchestrator(args.engine)
+    orchestrator.run(args.config)
 
 
 if __name__ == "__main__":

@@ -53,9 +53,7 @@ def run_hpo_study(bundle: DatasetBundle, cfg: TrainingConfig, seed: int) -> optu
         return accuracy(model, X_test, y_test)
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-    study = optuna.create_study(
-        direction="maximize", sampler=optuna.samplers.TPESampler(seed=seed)
-    )
+    study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=seed))
     study.optimize(objective, n_trials=cfg.n_trials)
     return study
 
