@@ -441,6 +441,12 @@ body {
     font-weight: 700;
 }
 
+.gate-status.fail {
+    background: rgba(239, 68, 68, 0.05);
+    color: var(--error-red);
+    border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
 .gate-name {
     font-weight: 500;
 }

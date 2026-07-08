@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Iframes
     const driftIframe = document.getElementById('drift-report-iframe');
+    const prodDriftIframe = document.getElementById('prod-drift-iframe');
     const caseStudyIframe = document.getElementById('case-study-iframe');
 
     // Pipeline flow steps
@@ -140,6 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Lazy-load iframes when clicked to speed up interface
             if (targetTab === 'drift' && driftIframe.src === 'about:blank') {
                 driftIframe.src = '/reports/data_drift_report.html';
+            } else if (targetTab === 'prod-drift' && prodDriftIframe.src === 'about:blank') {
+                prodDriftIframe.src = '/reports/production_drift_report.html';
             } else if (targetTab === 'casestudy' && caseStudyIframe.src === 'about:blank') {
                 caseStudyIframe.src = '/reports/case_study_drift.html';
             }
@@ -381,6 +384,19 @@ document.addEventListener('DOMContentLoaded', () => {
         renderProfileChart();
     });
 
+    function _updateGateUI(idPrefix, isPass) {
+        const statusEl = document.getElementById(`${idPrefix}-status`);
+        if (statusEl) {
+            if (isPass === null || isPass === undefined) {
+                statusEl.textContent = '-';
+                statusEl.className = 'gate-status';
+            } else {
+                statusEl.textContent = isPass ? 'PASS' : 'FAIL';
+                statusEl.className = isPass ? 'gate-status ok' : 'gate-status fail';
+            }
+        }
+    }
+
     // 8. Update System Status
     async function updateSystemStatus() {
         try {
@@ -401,6 +417,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 metricAccuracy.textContent = metrics.accuracy ? `${(metrics.accuracy * 100).toFixed(1)}%` : '99.5%';
                 metricConsistency.textContent = metrics.noise_consistency ? `${(metrics.noise_consistency * 100).toFixed(1)}%` : '99.0%';
                 metricBounded.textContent = metrics.outputs_bounded ? 'passed' : 'passed';
+
+                // Display gate configs and statuses dynamically
+                const gc = data.gates_config || {};
+                
+                // 1. Drift Gate
+                const driftShare = metrics.drift_share !== undefined ? metrics.drift_share : 0.0;
+                const maxDrift = gc.max_drifted_share !== undefined ? gc.max_drifted_share : 0.3;
+                document.getElementById('gate-drift-desc').textContent = `drift_ratio < ${(maxDrift).toFixed(2)}`;
+                _updateGateUI('gate-drift', driftShare < maxDrift);
+
+                // 2. Evaluation Gate
+                const minAcc = gc.min_accuracy !== undefined ? gc.min_accuracy : 0.85;
+                document.getElementById('gate-eval-desc').textContent = `accuracy >= ${(minAcc * 100).toFixed(1)}%`;
+                _updateGateUI('gate-eval', (metrics.accuracy !== undefined ? metrics.accuracy : 1.0) >= minAcc);
+
+                // 3. Perturbation/Robustness Gate
+                const minRob = gc.min_noise_consistency !== undefined ? gc.min_noise_consistency : 0.90;
+                document.getElementById('gate-robust-desc').textContent = `consistency >= ${(minRob * 100).toFixed(1)}%`;
+                _updateGateUI('gate-robust', (metrics.noise_consistency !== undefined ? metrics.noise_consistency : 1.0) >= minRob);
+
+                // 4. Contract Invariant Gate
+                _updateGateUI('gate-bounds', metrics.outputs_bounded !== false);
+
+                // 5. Subgroup Gate
+                const minSubAcc = gc.min_subgroup_accuracy !== undefined ? gc.min_subgroup_accuracy : 0.0;
+                const maxSubGap = gc.max_subgroup_accuracy_gap !== undefined ? gc.max_subgroup_accuracy_gap : 1.0;
+                document.getElementById('gate-subgroup-desc').textContent = `gap <= ${(maxSubGap * 100).toFixed(1)}% & acc >= ${(minSubAcc * 100).toFixed(1)}%`;
+                
+                let subgroupPass = true;
+                if (metrics.subgroups && Object.keys(metrics.subgroups).length > 0) {
+                    const overall = metrics.accuracy || 0.0;
+                    for (const col of Object.keys(metrics.subgroups)) {
+                        const subAcc = metrics.subgroups[col].accuracy;
+                        if (subAcc < minSubAcc || Math.abs(subAcc - overall) > maxSubGap) {
+                            subgroupPass = false;
+                            break;
+                        }
+                    }
+                }
+                _updateGateUI('gate-subgroup', subgroupPass);
             } else {
                 serveStatusText.textContent = 'Ray Serve: offline';
                 globalServerBadge.className = 'server-badge';
@@ -409,6 +465,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 metricConsistency.textContent = '-';
                 metricBounded.textContent = '-';
                 
+                // Reset gate UIs
+                _updateGateUI('gate-drift', null);
+                _updateGateUI('gate-eval', null);
+                _updateGateUI('gate-robust', null);
+                _updateGateUI('gate-bounds', null);
+                _updateGateUI('gate-subgroup', null);
+
                 Object.values(flowSteps).forEach(step => step.classList.remove('active'));
             }
         } catch (e) {

@@ -8,6 +8,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from mlops_pipeline.config import PipelineConfig
+
 app = FastAPI(title="MLOps Production Pipeline Dashboard")
 
 # Root directory of the project
@@ -29,6 +31,10 @@ class FeatureInput(BaseModel):
 @app.get("/api/status")
 async def get_system_status():
     """Check if the Ray Serve server is listening on port 8000."""
+    config_path = ROOT_DIR / "configs" / "pipeline.yaml"
+    cfg = PipelineConfig.from_yaml(config_path) if config_path.exists() else PipelineConfig()
+    gates_config = cfg.gates.model_dump(mode="json")
+
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get("http://127.0.0.1:8000/health", timeout=1.0)
@@ -37,15 +43,17 @@ async def get_system_status():
                 return {
                     "serve_status": "online",
                     "model_version": data.get("model_version", "unknown"),
-                    "metrics": data.get("metrics", {})
+                    "metrics": data.get("metrics", {}),
+                    "gates_config": gates_config,
                 }
     except Exception:
         pass
-    
+
     return {
         "serve_status": "offline",
         "model_version": "None",
-        "metrics": {}
+        "metrics": {},
+        "gates_config": gates_config,
     }
 
 @app.post("/api/predict")

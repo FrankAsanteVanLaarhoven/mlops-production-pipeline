@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLOps Production Platform Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body class="dark-theme">
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="static-dot"></span>
+                <h2>FOUNDRY // PIPELINE</h2>
+            </div>
+            
+            <nav class="sidebar-menu">
+                <button class="nav-item active" data-tab="overview">OVERVIEW</button>
+                <button class="nav-item" data-tab="train">RUN PIPELINE</button>
+                <button class="nav-item" data-tab="inference">INFERENCE SANDBOX</button>
+                <button class="nav-item" data-tab="drift">PIPELINE DRIFT</button>
+                <button class="nav-item" data-tab="prod-drift">PRODUCTION DRIFT</button>
+                <button class="nav-item" data-tab="casestudy">CASE STUDY DRIFT</button>
+            </nav>
+            
+            <!-- World Clock Widget -->
+            <div class="sidebar-clocks">
+                <div class="clock-header">WORLD_CLOCKS // UTC</div>
+                <div class="clock-row">
+                    <span class="clock-label">LON</span>
+                    <span class="clock-val" id="clock-lon">00:00:00</span>
+                </div>
+                <div class="clock-row">
+                    <span class="clock-label">NYC</span>
+                    <span class="clock-val" id="clock-nyc">00:00:00</span>
+                </div>
+                <div class="clock-row">
+                    <span class="clock-label">TYO</span>
+                    <span class="clock-val" id="clock-tyo">00:00:00</span>
+                </div>
+                <div class="clock-row">
+                    <span class="clock-label">LOC</span>
+                    <span class="clock-val" id="clock-loc">00:00:00</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <button id="theme-toggle" class="btn-theme-toggle" title="Toggle Light/Dark Mode">
+                    <span class="theme-label">LIGHT MODE</span>
+                </button>
+                <span class="version-tag">SYSTEM // ACTIVE</span>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <h1>CONTROL CENTER</h1>
+                <div class="server-badge" id="global-server-badge">
+                    <span class="badge-dot"></span>
+                    <span class="badge-text" id="serve-status-text">Ray Serve: checking...</span>
+                </div>
+            </header>
+
+            <!-- Tab: Overview -->
+            <section class="tab-content active" id="tab-overview">
+                <div class="grid-row stats-row">
+                    <!-- Serving Status Card -->
+                    <div class="glass-card status-card">
+                        <div class="card-header">
+                            <h3>DEPLOYMENT METADATA</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="model-meta">
+                                <span class="meta-label">active_version:</span>
+                                <span class="meta-value" id="loaded-version-display">None</span>
+                            </div>
+                            <div class="metrics-grid">
+                                <div class="metric-item">
+                                    <span class="metric-label">accuracy</span>
+                                    <span class="metric-value" id="metric-accuracy">-</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">robustness</span>
+                                    <span class="metric-value" id="metric-consistency">-</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">safety_bounds</span>
+                                    <span class="metric-value" id="metric-bounded">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pipeline Gates Summary -->
+                    <div class="glass-card gates-card">
+                        <div class="card-header">
+                            <h3>QUALITY CONTROL GATES</h3>
+                        </div>
+                        <div class="card-body">
+                            <ul class="gates-list">
+                                <li id="gate-drift-item">
+                                    <span class="gate-status" id="gate-drift-status">OK</span>
+                                    <span class="gate-name">Evidently Drift Gate</span>
+                                    <span class="gate-desc" id="gate-drift-desc">drift_ratio &lt; 0.30</span>
+                                </li>
+                                <li id="gate-eval-item">
+                                    <span class="gate-status" id="gate-eval-status">OK</span>
+                                    <span class="gate-name">Evaluation Gate</span>
+                                    <span class="gate-desc" id="gate-eval-desc">accuracy &ge; 0.85</span>
+                                </li>
+                                <li id="gate-robust-item">
+                                    <span class="gate-status" id="gate-robust-status">OK</span>
+                                    <span class="gate-name">Perturbation Gate</span>
+                                    <span class="gate-desc" id="gate-robust-desc">consistency &ge; 0.90</span>
+                                </li>
+                                <li id="gate-bounds-item">
+                                    <span class="gate-status" id="gate-bounds-status">OK</span>
+                                    <span class="gate-name">Contract Invariant Gate</span>
+                                    <span class="gate-desc" id="gate-bounds-desc">output_bounds = [0, 1]</span>
+                                </li>
+                                <li id="gate-subgroup-item">
+                                    <span class="gate-status" id="gate-subgroup-status">OK</span>
+                                    <span class="gate-name">Subgroup Gate</span>
+                                    <span class="gate-desc" id="gate-subgroup-desc">accuracy gap &le; 1.00</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pipeline Architecture Flow Visualizer -->
+                <div class="glass-card flow-card">
+                    <div class="card-header">
+                        <h3>PIPELINE GRAPH EXECUTION</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="pipeline-flow-visualizer">
+                            <div class="flow-step" id="flow-ingest">
+                                <span class="step-num">01</span>
+                                <span class="step-title">Ingest</span>
+                                <span class="step-status">Ingestion Step</span>
+                            </div>
+                            <div class="flow-arrow">➔</div>
+                            <div class="flow-step" id="flow-drift">
+                                <span class="step-num">02</span>
+                                <span class="step-title">Drift Check</span>
+                                <span class="step-status">Evidently Gate</span>
+                            </div>
+                            <div class="flow-arrow">➔</div>
+                            <div class="flow-step" id="flow-hpo">
+                                <span class="step-num">03</span>
+                                <span class="step-title">HPO & QAT</span>
+                                <span class="step-status">Optuna / Brevitas</span>
+                            </div>
+                            <div class="flow-arrow">➔</div>
+                            <div class="flow-step" id="flow-gates">
+                                <span class="step-num">04</span>
+                                <span class="step-title">Gate Verification</span>
+                                <span class="step-status">Robustness & Acc</span>
+                            </div>
+                            <div class="flow-arrow">➔</div>
+                            <div class="flow-step" id="flow-registry">
+                                <span class="step-num">05</span>
+                                <span class="step-title">Publish</span>
+                                <span class="step-status">DVC Versioning</span>
+                            </div>
+                            <div class="flow-arrow">➔</div>
+                            <div class="flow-step" id="flow-serve">
+                                <span class="step-num">06</span>
+                                <span class="step-title">Serve</span>
+                                <span class="step-status">Ray Deployment</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Run Pipeline (Train) -->
+            <section class="tab-content" id="tab-train">
+                <div class="glass-card terminal-card">
+                    <div class="card-header">
+                        <h3>ORCHESTRATION TERMINAL</h3>
+                        <div class="header-actions">
+                            <button class="btn btn-primary" id="btn-start-train">EXECUTE PIPELINE</button>
+                            <span class="loader-spinner hidden" id="train-spinner"></span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="terminal-container">
+                            <div class="terminal-header">
+                                <span class="term-dot"></span>
+                                <span class="term-dot"></span>
+                                <span class="term-dot"></span>
+                                <span class="term-title">zenml_terminal_stdout</span>
+                            </div>
+                            <pre class="terminal-body" id="train-logs-console">Console idle. Execute pipeline to view standard output streaming...</pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Inference Sandbox -->
+            <section class="tab-content" id="tab-inference">
+                <div class="grid-row inference-row">
+                    <!-- Feature Sliders Form -->
+                    <div class="glass-card features-card">
+                        <div class="card-header">
+                            <h3>FEATURE VECTOR INPUTS</h3>
+                            <button class="btn btn-secondary btn-sm" id="btn-random-features">RANDOMIZE PARAMETERS</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="sliders-list" id="sliders-container">
+                                <!-- 10 Sliders will be dynamically populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prediction Result Display -->
+                    <div class="glass-card result-card">
+                        <div class="card-header">
+                            <h3>REAL-TIME INFERENCE SANDBOX</h3>
+                        </div>
+                        <div class="card-body prediction-container">
+                            <div class="prediction-box">
+                                <div class="pred-label">class_prediction</div>
+                                <div class="pred-value" id="pred-class-val">-</div>
+                                <div class="pred-prob-bar">
+                                    <div class="pred-prob-fill" id="pred-fill-width" style="width: 0%"></div>
+                                </div>
+                                <div class="pred-prob-val" id="pred-prob-text">probability: -</div>
+                            </div>
+                            
+                            <div class="panel-divider"></div>
+                            
+                            <div class="prediction-info">
+                                <p>Inputs are validated via Pydantic model schemas defined in <code class="mono">schemas.py</code>. Feature vectors with absolute values exceeding <code class="mono">&plusmn;10.0</code> trigger immediate OOD (out-of-distribution) safety guardrail exceptions on Ray Serve.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Feed Visualizers Row -->
+                <div class="grid-row visualizer-row">
+                    <!-- Feature Profile (Diverging Bar Chart) -->
+                    <div class="glass-card profile-card">
+                        <div class="card-header">
+                            <h3>LIVE FEATURE PROFILE // DIVERGING BARS</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="profile-chart-container">
+                                <svg id="profile-chart-svg" viewBox="0 0 500 240"></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Stream metrics table & Scrolling Line Chart -->
+                    <div class="glass-card history-card">
+                        <div class="card-header">
+                            <h3>LIVE PREDICTION STREAM</h3>
+                        </div>
+                        <div class="card-body flex-row">
+                            <div class="stream-stats-panel">
+                                <div class="stream-stat">
+                                    <span class="stat-lbl">query_count</span>
+                                    <span class="stat-val" id="stream-count">0</span>
+                                </div>
+                                <div class="stream-stat">
+                                    <span class="stat-lbl">mean_val</span>
+                                    <span class="stat-val" id="stream-mean">-</span>
+                                </div>
+                                <div class="stream-stat">
+                                    <span class="stat-lbl">std_dev</span>
+                                    <span class="stat-val" id="stream-std">-</span>
+                                </div>
+                            </div>
+                            <div class="stream-chart-container">
+                                <svg id="stream-chart-svg" viewBox="0 0 350 160"></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Evidently Drift Report -->
+            <section class="tab-content iframe-tab" id="tab-drift">
+                <div class="iframe-container">
+                    <iframe id="drift-report-iframe" src="about:blank" title="Evidently Data Drift Report"></iframe>
+                </div>
+            </section>
+
+            <section class="tab-content iframe-tab" id="tab-prod-drift">
+                <div class="iframe-container">
+                    <iframe id="prod-drift-iframe" src="about:blank" title="Production Data Drift Report"></iframe>
+                </div>
+            </section>
+            
+            <section class="tab-content iframe-tab" id="tab-casestudy">
+                <div class="iframe-container">
+                    <iframe id="case-study-iframe" src="about:blank" title="Case Study Demographic Shift Report"></iframe>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js?v=3"></script>
+</body>
+</html>
