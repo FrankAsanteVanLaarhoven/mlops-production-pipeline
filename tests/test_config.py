@@ -42,3 +42,9 @@ def test_step_param_is_json_safe():
     import json
 
     json.dumps(PipelineConfig().as_step_param())
+
+
+def test_float_range_invalid_rejected():
+    with pytest.raises(ValidationError):
+        PipelineConfig.model_validate({"training": {"lr": {"low": 1.0, "high": 0.1}}})
+

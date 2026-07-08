@@ -113,3 +113,62 @@ def test_dvc_track_raises_on_dvc_failure(trained, bundle, tmp_path, monkeypatch)
             root=tmp_path / "registry",
             dvc_track=True,
         )
+
+
+def test_git_commit_failure_returns_none(trained, bundle, tmp_path, monkeypatch):
+    import subprocess
+    import mlops_pipeline.registry as registry_module
+
+    def mock_run(*args, **kwargs):
+        raise FileNotFoundError("git not found")
+
+    monkeypatch.setattr(registry_module.subprocess, "run", mock_run)
+
+    model, params = trained
+    architecture = {
+        "n_features": bundle.n_features,
+        "hidden_dim": params["hidden_dim"],
+        "weight_bit_width": params["weight_bit_width"],
+    }
+    card = register_model(
+        model=model,
+        architecture=architecture,
+        params=params,
+        metrics={"accuracy": 0.9},
+        drift_share=0.0,
+        data_fingerprint=bundle.fingerprint(),
+        root=tmp_path / "registry",
+        dvc_track=False,
+    )
+    assert card["git_commit"] is None
+
+
+def test_dvc_track_success_prints_message(trained, bundle, tmp_path, monkeypatch, capsys):
+    import subprocess
+    import mlops_pipeline.registry as registry_module
+
+    monkeypatch.setattr(registry_module.shutil, "which", lambda _: "/usr/bin/dvc")
+    monkeypatch.setattr(
+        registry_module.subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(a, returncode=0, stdout="ok", stderr=""),
+    )
+
+    model, params = trained
+    architecture = {
+        "n_features": bundle.n_features,
+        "hidden_dim": params["hidden_dim"],
+        "weight_bit_width": params["weight_bit_width"],
+    }
+    register_model(
+        model=model,
+        architecture=architecture,
+        params=params,
+        metrics={"accuracy": 0.9},
+        drift_share=0.0,
+        data_fingerprint=bundle.fingerprint(),
+        root=tmp_path / "registry",
+        dvc_track=True,
+    )
+    assert "DVC tracking updated for" in capsys.readouterr().out
+

@@ -93,12 +93,13 @@ def main() -> None:
     )
 
     serving_service = get_serving_service(args.engine)
+    prod_data_path = Path(cfg.serving.production_data_path).resolve()
     serving_service.start(
         host=cfg.serving.host,
         port=cfg.serving.port,
         registry_root=registry_root,
         max_abs_feature_value=cfg.serving.max_abs_feature_value,
-        production_data_path=str(cfg.serving.production_data_path),
+        production_data_path=str(prod_data_path),
     )
 
     if args.smoke_test:

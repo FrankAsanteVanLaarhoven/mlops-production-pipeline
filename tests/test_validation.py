@@ -132,3 +132,27 @@ def test_enforce_model_gates_subgroups():
             },
             gates,
         )
+
+
+def test_evaluate_model_subgroup_edge_cases(trained, bundle, config):
+    model, _ = trained
+    
+    # 1. Non-existent feature name (hits line 94 continue)
+    metrics_non_existent = evaluate_model(
+        model, bundle, config.gates.noise_std, config.seed, subgroup_features=["non_existent_feature"]
+    )
+    assert "non_existent_feature" not in metrics_non_existent.get("subgroups", {})
+
+    # 2. Existing feature but all values <= 0.5 (hits line 98 continue)
+    import numpy as np
+    orig_X_test = bundle.X_test.copy()
+    try:
+        # Force all values of feature_0 (index 0) to be 0.0 (<= 0.5)
+        bundle.X_test[:, 0] = 0.0
+        metrics_no_match = evaluate_model(
+            model, bundle, config.gates.noise_std, config.seed, subgroup_features=["feature_0"]
+        )
+        assert "feature_0" not in metrics_no_match.get("subgroups", {})
+    finally:
+        bundle.X_test = orig_X_test
+

@@ -41,7 +41,8 @@ class ModelService:
         self.output_guard = Guard.for_pydantic(PredictionResponse) if _HAS_GUARDRAILS else None
         print(
             f"[serving] loaded {self.card['version']} from {registry_root} "
-            f"(guardrails={'on' if self.output_guard else 'off'})"
+            f"(guardrails={'on' if self.output_guard else 'off'}, "
+            f"production_data_path={self.production_data_path})"
         )
 
     async def __call__(self, request: Request) -> JSONResponse:
@@ -83,7 +84,9 @@ class ModelService:
             "model_version": self.card["version"],
         }
 
+        print(f"[serving] self.production_data_path={self.production_data_path}", flush=True)
         if self.production_data_path is not None:
+            print(f"[serving] calling _log_prediction with features={parsed.features}", flush=True)
             self._log_prediction(parsed.features)
 
         try:
@@ -101,6 +104,7 @@ class ModelService:
     def _log_prediction(self, features: list[float]) -> None:
         """Log production features to a CSV file."""
         try:
+            print(f"[serving] opening {self.production_data_path} for logging...", flush=True)
             self.production_data_path.parent.mkdir(parents=True, exist_ok=True)
             file_exists = self.production_data_path.exists()
             with open(self.production_data_path, "a") as f:
@@ -110,8 +114,9 @@ class ModelService:
                         feature_names = [f"feature_{i}" for i in range(self.n_features)]
                     f.write(",".join(feature_names) + "\n")
                 f.write(",".join(map(str, features)) + "\n")
+            print(f"[serving] successfully logged prediction to {self.production_data_path}", flush=True)
         except Exception as e:
-            print(f"[serving] failed to log prediction: {e}")
+            print(f"[serving] failed to log prediction: {e}", flush=True)
 
 
 class RayServingAdapter(BaseServingService):
@@ -131,6 +136,7 @@ class RayServingAdapter(BaseServingService):
         resolved_root = str(os.path.abspath(registry_root))
         ray.init(logging_level="warning")
         serve.start(http_options={"host": host, "port": port})
+        print(f"[serving] starting Ray Serve with production_data_path={production_data_path}")
         serve.run(
             ModelService.bind(resolved_root, max_abs_feature_value, production_data_path),
             route_prefix="/",

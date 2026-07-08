@@ -1,4 +1,4 @@
-.PHONY: install hooks lint review test test-all format train serve smoke notebook docker-build docker-serve clean
+.PHONY: install hooks lint review test test-all format train serve monitor smoke notebook docker-build docker-serve clean
 
 install:            ## Install all dependencies including dev + notebook tools
 	uv sync --group dev --group notebooks
@@ -32,6 +32,9 @@ train:              ## Run the full training pipeline
 
 serve:              ## Serve the latest registered model
 	uv run mlops-serve --config configs/pipeline.yaml
+
+monitor:            ## Run production drift monitoring
+	uv run mlops-monitor --config configs/pipeline.yaml
 
 smoke:              ## Deploy, hit the guarded API with good/bad requests, exit
 	uv run mlops-serve --config configs/pipeline.yaml --smoke-test

@@ -84,3 +84,106 @@ def test_serving_logs_predictions(tmp_path, trained, bundle):
     assert len(df) == 1
     assert list(df.columns) == bundle.feature_names
     assert [float(x) for x in list(df.iloc[0])] == [0.5] * 10
+
+
+def test_monitor_drift_read_csv_exception(tmp_path):
+    # Pass a directory path which will raise an IsADirectoryError / Exception in read_csv
+    res = monitor_drift(
+        config_path="configs/pipeline.yaml",
+        production_data_path=tmp_path,
+        report_path=tmp_path / "report.html",
+    )
+    assert res == 0
+
+
+def test_monitor_drift_load_baseline_reference_failure(tmp_path):
+    # Set csv_path to a non-existent file to force load_dataset failure
+    import yaml
+    cfg_data = {
+        "data": {
+            "source": "csv",
+            "csv_path": str(tmp_path / "non_existent_data.csv"),
+        }
+    }
+    config_file = tmp_path / "bad_pipeline.yaml"
+    config_file.write_text(yaml.dump(cfg_data))
+
+    # We need production data to exist and have >= 10 samples so it proceeds to baseline load
+    features = [f"feature_{i}" for i in range(10)]
+    data = [[0.1] * 10] * 15
+    df = pd.DataFrame(data, columns=features)
+    log_path = tmp_path / "prod.csv"
+    df.to_csv(log_path, index=False)
+
+    res = monitor_drift(
+        config_path=config_file,
+        production_data_path=log_path,
+        report_path=tmp_path / "report.html",
+    )
+    assert res == 1
+
+
+def test_monitor_drift_missing_columns(tmp_path):
+    # Production columns don't match reference columns
+    df = pd.DataFrame([[0.5] * 5] * 12, columns=[f"feature_{i}" for i in range(5)])
+    log_path = tmp_path / "prod_bad_cols.csv"
+    df.to_csv(log_path, index=False)
+
+    res = monitor_drift(
+        config_path="configs/pipeline.yaml",
+        production_data_path=log_path,
+        report_path=tmp_path / "report.html",
+    )
+    assert res == 1
+
+
+def test_monitor_drift_fail_on_drift_gate_breached(tmp_path):
+    # Setup production data and a config that enforces drift check and column drift threshold
+    import yaml
+    cfg_data = {
+        "gates": {
+            "max_drifted_share": 0.0,  # force global breach
+            "per_column_drift": {"feature_0": 0.99},  # force per-column breach
+        }
+    }
+    config_file = tmp_path / "drift_pipeline.yaml"
+    config_file.write_text(yaml.dump(cfg_data))
+
+    features = [f"feature_{i}" for i in range(10)]
+    data = [[0.1] * 10] * 15
+    df = pd.DataFrame(data, columns=features)
+    log_path = tmp_path / "prod.csv"
+    df.to_csv(log_path, index=False)
+
+    # With fail_on_drift=True, should return 1
+    res = monitor_drift(
+        config_path=config_file,
+        production_data_path=log_path,
+        report_path=tmp_path / "report.html",
+        fail_on_drift=True,
+    )
+    assert res == 1
+
+
+def test_monitoring_main(tmp_path, monkeypatch):
+    import sys
+    import mlops_pipeline.monitoring as monitoring_module
+
+    exit_codes = []
+    monkeypatch.setattr(sys, "exit", lambda code: exit_codes.append(code))
+    
+    # We point to a non-existent CSV to skip gracefully with 0
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "mlops-monitor",
+            "--config",
+            "configs/pipeline.yaml",
+            "--production-data",
+            str(tmp_path / "non_existent.csv"),
+        ],
+    )
+    monitoring_module.main()
+    assert exit_codes == [0]
+

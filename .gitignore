@@ -13,6 +13,7 @@ dist/
 artifacts/*
 !artifacts/*.dvc
 !artifacts/.gitignore
+!src/mlops_pipeline/default_model/*
 *.pt
 *.html
 *.db

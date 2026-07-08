@@ -1,0 +1,40 @@
+{
+  "version": "v20260708-191704-a078904",
+  "created_at": "2026-07-08T19:17:04.024151+00:00",
+  "git_commit": "a078904",
+  "data_fingerprint": "f1d336f3da151b96",
+  "feature_names": [
+    "feature_0",
+    "feature_1",
+    "feature_2",
+    "feature_3",
+    "feature_4",
+    "feature_5",
+    "feature_6",
+    "feature_7",
+    "feature_8",
+    "feature_9"
+  ],
+  "architecture": {
+    "n_features": 10,
+    "hidden_dim": 26,
+    "weight_bit_width": 6
+  },
+  "hyperparameters": {
+    "lr": 0.017113105372806366,
+    "weight_bit_width": 6,
+    "hidden_dim": 26
+  },
+  "metrics": {
+    "accuracy": 0.9950000047683716,
+    "noise_consistency": 0.9900000095367432,
+    "outputs_bounded": true,
+    "noise_std": 0.05,
+    "subgroups": {}
+  },
+  "drift_share": 0.0,
+  "framework_versions": {
+    "torch": "2.12.1",
+    "brevitas": "0.12.1"
+  }
+}
