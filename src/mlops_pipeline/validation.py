@@ -58,8 +58,14 @@ def data_drift_share(bundle: DatasetBundle, report_path: str | Path | None = Non
     return share
 
 
-def evaluate_model(model: nn.Module, bundle: DatasetBundle, noise_std: float, seed: int) -> dict:
-    """Accuracy, perturbation consistency, and output-bound safety in one pass."""
+def evaluate_model(
+    model: nn.Module,
+    bundle: DatasetBundle,
+    noise_std: float,
+    seed: int,
+    subgroup_features: list[str] | None = None,
+) -> dict:
+    """Accuracy, consistency, safety bounds, and subgroup performance in one pass."""
     X = torch.tensor(bundle.X_test)
     y = torch.tensor(bundle.y_test)
 
@@ -81,11 +87,31 @@ def evaluate_model(model: nn.Module, bundle: DatasetBundle, noise_std: float, se
         extreme_outputs = model(extremes)
         bounded = bool(((extreme_outputs >= 0.0) & (extreme_outputs <= 1.0)).all().item())
 
+    subgroups = {}
+    if subgroup_features:
+        for feat in subgroup_features:
+            if feat not in bundle.feature_names:
+                continue
+            idx = bundle.feature_names.index(feat)
+            mask = bundle.X_test[:, idx] > 0.5
+            if not mask.any():
+                continue
+            X_sub = X[mask]
+            y_sub = y[mask]
+            with torch.no_grad():
+                preds_sub = (model(X_sub) > 0.5).float()
+                sub_acc = float((preds_sub == y_sub).float().mean().item())
+            subgroups[feat] = {
+                "accuracy": sub_acc,
+                "count": int(mask.sum()),
+            }
+
     return {
         "accuracy": acc,
         "noise_consistency": consistency,
         "outputs_bounded": bounded,
         "noise_std": noise_std,
+        "subgroups": subgroups,
     }
 
 
@@ -124,5 +150,22 @@ def enforce_model_gates(metrics: dict, gates: GatesConfig) -> None:
         )
     if not metrics["outputs_bounded"]:
         breaches.append("output probabilities escape [0, 1] on extreme inputs")
+
+    subgroups = metrics.get("subgroups", {})
+    overall_acc = metrics["accuracy"]
+    for feat, sub_metrics in subgroups.items():
+        sub_acc = sub_metrics["accuracy"]
+        if sub_acc < gates.min_subgroup_accuracy:
+            breaches.append(
+                f"subgroup '{feat}' accuracy {sub_acc:.2%} "
+                f"< required {gates.min_subgroup_accuracy:.2%}"
+            )
+        gap = abs(sub_acc - overall_acc)
+        if gap > gates.max_subgroup_accuracy_gap:
+            breaches.append(
+                f"subgroup '{feat}' accuracy gap {gap:.2%} "
+                f"> limit {gates.max_subgroup_accuracy_gap:.2%}"
+            )
+
     if breaches:
         raise GateFailure("model gates breached: " + "; ".join(breaches))

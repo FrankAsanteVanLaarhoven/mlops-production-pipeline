@@ -66,6 +66,7 @@ class TrainingConfig(BaseModel):
     lr: FloatRange = FloatRange(low=1e-3, high=1e-1, log=True)
     weight_bit_width: IntRange = IntRange(low=4, high=8)
     hidden_dim: IntRange = IntRange(low=4, high=32)
+    class_weighted: bool = False
 
 
 class GatesConfig(BaseModel):
@@ -76,6 +77,9 @@ class GatesConfig(BaseModel):
     min_noise_consistency: float = Field(0.90, ge=0.0, le=1.0)
     noise_std: float = Field(0.05, gt=0.0)
     per_column_drift: dict[str, float] = Field(default_factory=dict)
+    min_subgroup_accuracy: float = Field(0.0, ge=0.0, le=1.0)
+    max_subgroup_accuracy_gap: float = Field(1.0, ge=0.0, le=1.0)
+    subgroup_features: list[str] = Field(default_factory=list)
 
 
 class RegistryConfig(BaseModel):

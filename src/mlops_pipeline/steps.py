@@ -86,7 +86,9 @@ def evaluate_step(config: dict, dataset: dict, training_output: dict) -> dict:
     bundle = DatasetBundle.from_dict(dataset)
     model, _ = load_checkpoint(training_output["checkpoint_path"])
 
-    metrics = evaluate_model(model, bundle, cfg.gates.noise_std, cfg.seed)
+    metrics = evaluate_model(
+        model, bundle, cfg.gates.noise_std, cfg.seed, cfg.gates.subgroup_features
+    )
     print(
         f"[evaluate] accuracy={metrics['accuracy']:.2%} "
         f"noise_consistency={metrics['noise_consistency']:.2%} "

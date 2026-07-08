@@ -78,3 +78,57 @@ def test_enforce_data_gate_per_column():
     message = str(excinfo.value)
     assert "drifted feature share" in message
     assert "column 'feature_0'" in message
+
+
+def test_evaluate_model_subgroup_metrics(trained, bundle):
+    model, _ = trained
+    # Treat feature_0 as a mock subgroup feature
+    metrics = evaluate_model(
+        model, bundle, noise_std=0.05, seed=42, subgroup_features=["feature_0"]
+    )
+    assert "subgroups" in metrics
+    assert "feature_0" in metrics["subgroups"]
+    sub_m = metrics["subgroups"]["feature_0"]
+    assert 0.0 <= sub_m["accuracy"] <= 1.0
+    assert sub_m["count"] > 0
+
+
+def test_enforce_model_gates_subgroups():
+    # Pass subgroup gates
+    gates = GatesConfig(
+        min_subgroup_accuracy=0.80, max_subgroup_accuracy_gap=0.15, subgroup_features=["feature_0"]
+    )
+    # Subgroup accuracy 0.90, overall 0.95 (gap 0.05)
+    enforce_model_gates(
+        {
+            "accuracy": 0.95,
+            "noise_consistency": 0.95,
+            "outputs_bounded": True,
+            "subgroups": {"feature_0": {"accuracy": 0.90, "count": 10}},
+        },
+        gates,
+    )
+
+    # Fail check: accuracy below limit
+    with pytest.raises(GateFailure, match="subgroup 'feature_0' accuracy"):
+        enforce_model_gates(
+            {
+                "accuracy": 0.95,
+                "noise_consistency": 0.95,
+                "outputs_bounded": True,
+                "subgroups": {"feature_0": {"accuracy": 0.75, "count": 10}},
+            },
+            gates,
+        )
+
+    # Fail check: gap above limit
+    with pytest.raises(GateFailure, match="subgroup 'feature_0' accuracy gap"):
+        enforce_model_gates(
+            {
+                "accuracy": 0.95,
+                "noise_consistency": 0.95,
+                "outputs_bounded": True,
+                "subgroups": {"feature_0": {"accuracy": 0.78, "count": 10}},
+            },
+            gates,
+        )

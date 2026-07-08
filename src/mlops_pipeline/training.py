@@ -12,8 +12,28 @@ from .data import DatasetBundle
 from .model import build_model
 
 
-def _fit(model: nn.Module, X: torch.Tensor, y: torch.Tensor, lr: float, epochs: int) -> float:
-    criterion = nn.BCELoss()
+def _fit(
+    model: nn.Module,
+    X: torch.Tensor,
+    y: torch.Tensor,
+    lr: float,
+    epochs: int,
+    class_weighted: bool = False,
+) -> float:
+    if class_weighted:
+        n_pos = float((y == 1).sum().item())
+        n_neg = float((y == 0).sum().item())
+        n_total = len(y)
+        w_pos = n_total / (2.0 * n_pos) if n_pos > 0 else 1.0
+        w_neg = n_total / (2.0 * n_neg) if n_neg > 0 else 1.0
+
+        weight_tensor = torch.zeros_like(y)
+        weight_tensor[y == 1] = w_pos
+        weight_tensor[y == 0] = w_neg
+        criterion = nn.BCELoss(weight=weight_tensor)
+    else:
+        criterion = nn.BCELoss()
+
     optimizer = optim.Adam(model.parameters(), lr=lr)
     loss = torch.tensor(float("nan"))
     model.train()
@@ -49,7 +69,7 @@ def run_hpo_study(bundle: DatasetBundle, cfg: TrainingConfig, seed: int) -> optu
 
         torch.manual_seed(seed)
         model = build_model(bundle.n_features, hidden_dim, bit_width)
-        _fit(model, X_train, y_train, lr, cfg.hpo_epochs)
+        _fit(model, X_train, y_train, lr, cfg.hpo_epochs, class_weighted=cfg.class_weighted)
         return accuracy(model, X_test, y_test)
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -75,6 +95,7 @@ def train_final(
         torch.tensor(bundle.y_train),
         params["lr"],
         cfg.epochs,
+        class_weighted=cfg.class_weighted,
     )
     model.eval()
     return model

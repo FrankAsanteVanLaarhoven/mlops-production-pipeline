@@ -18,6 +18,7 @@ training:
   lr: { low: 1.0e-3, high: 1.0e-1, log: true }
   weight_bit_width: { low: 4, high: 8 }
   hidden_dim: { low: 4, high: 32 }
+  class_weighted: false
 
 gates:
   max_drifted_share: 0.3   # fail the run if >= 30% of features drift
@@ -26,6 +27,9 @@ gates:
   noise_std: 0.05
   per_column_drift:
     feature_0: 0.05        # fail immediately if feature_0 p-value < 0.05
+  min_subgroup_accuracy: 0.0
+  max_subgroup_accuracy_gap: 1.0
+  subgroup_features: []
 
 registry:
   root: artifacts/registry
