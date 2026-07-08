@@ -1,0 +1,18 @@
+# Ignore all backend Python files and directories for purely static Vercel deployment
+*.py
+src/
+tests/
+tools/
+configs/
+.venv/
+.zenml-config/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+Makefile
+pyproject.toml
+uv.lock
+Dockerfile
+CONTRIBUTING.md
+LICENSE
+README.md
