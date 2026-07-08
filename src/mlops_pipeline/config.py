@@ -97,6 +97,7 @@ class ServingConfig(BaseModel):
     max_abs_feature_value: float = Field(
         10.0, gt=0.0, description="reject inputs with |value| above this as out-of-distribution"
     )
+    production_data_path: Path = Path("artifacts/serving/production_data.csv")
 
 
 class PipelineConfig(BaseModel):

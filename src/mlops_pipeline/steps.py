@@ -117,6 +117,7 @@ def register_step(
         data_fingerprint=bundle.fingerprint(),
         root=cfg.registry.root,
         dvc_track=cfg.registry.dvc_track,
+        feature_names=bundle.feature_names,
     )
     print(f"[register] published {card['version']} to {cfg.registry.root}")
     return card["version"]

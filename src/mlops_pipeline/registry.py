@@ -52,6 +52,7 @@ def register_model(
     data_fingerprint: str,
     root: str | Path,
     dvc_track: bool = False,
+    feature_names: list[str] | None = None,
 ) -> dict:
     """Persist the model with its card, update the latest pointer, return the card."""
     root = Path(root)
@@ -69,6 +70,7 @@ def register_model(
         "created_at": datetime.now(UTC).isoformat(),
         "git_commit": commit,
         "data_fingerprint": data_fingerprint,
+        "feature_names": feature_names,
         "architecture": architecture,
         "hyperparameters": params,
         "metrics": metrics,

@@ -27,6 +27,7 @@ dependencies = [
 [project.scripts]
 mlops-train = "mlops_pipeline.pipeline:main"
 mlops-serve = "mlops_pipeline.serving:main"
+mlops-monitor = "mlops_pipeline.monitoring:main"
 
 [project.urls]
 Repository = "https://github.com/FrankAsanteVanLaarhoven/mlops-production-pipeline"

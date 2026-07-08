@@ -98,6 +98,7 @@ def main() -> None:
         port=cfg.serving.port,
         registry_root=registry_root,
         max_abs_feature_value=cfg.serving.max_abs_feature_value,
+        production_data_path=str(cfg.serving.production_data_path),
     )
 
     if args.smoke_test:

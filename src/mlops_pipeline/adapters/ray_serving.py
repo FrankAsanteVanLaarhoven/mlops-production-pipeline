@@ -2,6 +2,7 @@
 
 import json
 import os
+from pathlib import Path
 
 import ray
 import torch
@@ -26,11 +27,17 @@ except ImportError:
 class ModelService:
     """Serves the registry's latest model behind request/response contracts."""
 
-    def __init__(self, registry_root: str, max_abs_feature_value: float):
+    def __init__(
+        self,
+        registry_root: str,
+        max_abs_feature_value: float,
+        production_data_path: str | None = None,
+    ):
         """Load the model selected by the registry's latest pointer."""
         self.model, self.card = load_latest(registry_root)
         self.n_features = int(self.card["architecture"]["n_features"])
         self.max_abs_feature_value = max_abs_feature_value
+        self.production_data_path = Path(production_data_path) if production_data_path else None
         self.output_guard = Guard.for_pydantic(PredictionResponse) if _HAS_GUARDRAILS else None
         print(
             f"[serving] loaded {self.card['version']} from {registry_root} "
@@ -76,6 +83,9 @@ class ModelService:
             "model_version": self.card["version"],
         }
 
+        if self.production_data_path is not None:
+            self._log_prediction(parsed.features)
+
         try:
             PredictionResponse.model_validate(response)
             if self.output_guard is not None:
@@ -88,11 +98,33 @@ class ModelService:
             )
         return JSONResponse(response)
 
+    def _log_prediction(self, features: list[float]) -> None:
+        """Log production features to a CSV file."""
+        try:
+            self.production_data_path.parent.mkdir(parents=True, exist_ok=True)
+            file_exists = self.production_data_path.exists()
+            with open(self.production_data_path, "a") as f:
+                if not file_exists:
+                    feature_names = self.card.get("feature_names")
+                    if not feature_names:
+                        feature_names = [f"feature_{i}" for i in range(self.n_features)]
+                    f.write(",".join(feature_names) + "\n")
+                f.write(",".join(map(str, features)) + "\n")
+        except Exception as e:
+            print(f"[serving] failed to log prediction: {e}")
+
 
 class RayServingAdapter(BaseServingService):
     """Ray Serve implementation of BaseServingService."""
 
-    def start(self, host: str, port: int, registry_root: str, max_abs_feature_value: float) -> None:
+    def start(
+        self,
+        host: str,
+        port: int,
+        registry_root: str,
+        max_abs_feature_value: float,
+        production_data_path: str | None = None,
+    ) -> None:
         """Start the Ray Serve deployment serving the latest model."""
         # Replicas run from Ray's packaged copy of the working dir; resolve the
         # registry to an absolute path so they read the real one.
@@ -100,7 +132,7 @@ class RayServingAdapter(BaseServingService):
         ray.init(logging_level="warning")
         serve.start(http_options={"host": host, "port": port})
         serve.run(
-            ModelService.bind(resolved_root, max_abs_feature_value),
+            ModelService.bind(resolved_root, max_abs_feature_value, production_data_path),
             route_prefix="/",
         )
         print(f"[serving] live on http://{host}:{port}")
